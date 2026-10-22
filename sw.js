@@ -1,6 +1,6 @@
 // Service worker de Montecarlo Sierra de las Quijadas.
 // Cuando cambies index.html u otro archivo, subí VERSION para que los celulares descarguen la versión nueva.
-const VERSION = 'v1-2026-10-22';
+const VERSION = 'v2-2026-10-22';
 const APP_CACHE = 'msq-app-' + VERSION;
 const FONT_CACHE = 'msq-fonts';
 const APP_FILES = [
