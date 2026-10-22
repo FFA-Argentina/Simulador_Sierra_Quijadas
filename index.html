@@ -1,0 +1,1184 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Montecarlo Sierra de las Quijadas</title>
+<meta name="description" content="Simulación de Montecarlo del plan de negocios Volterra para el Parque Nacional Sierra de las Quijadas: VAN, TIR, canon e inversión de equilibrio.">
+<meta name="theme-color" content="#a3452a" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1011" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Montecarlo SQ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: panel de supuestos fijo a la izquierda, resultados a la derecha; en teléfono se apilan */
+:root {
+  --bg: #f3f4f5; --surface: #fdfdfc; --ink: #14171a; --ink2: #4c5157; --muted: #81868c;
+  --line: #e0e2e5; --axis: #c3c6ca; --accent: #a3452a; --accent-ink: #fff;
+  --series: #2a78d6; --series-soft: rgba(42,120,214,.16); --series-mid: rgba(42,120,214,.32);
+  --neg: #e34948; --ref: #4c5157; --good: #0ca30c; --warn: #fab219; --crit: #d03b3b;
+  --chip-bg: #eceef0;
+  --f-display: "Archivo", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1011; --surface: #17191b; --ink: #eef0f1; --ink2: #bfc4c9; --muted: #858a90;
+  --line: #2a2d30; --axis: #3a3e42; --accent: #d26e4c; --accent-ink: #160b07;
+  --series: #3987e5; --series-soft: rgba(57,135,229,.20); --series-mid: rgba(57,135,229,.40);
+  --neg: #e66767; --ref: #bfc4c9; --chip-bg: #222528; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1011; --surface: #17191b; --ink: #eef0f1; --ink2: #bfc4c9; --muted: #858a90;
+  --line: #2a2d30; --axis: #3a3e42; --accent: #d26e4c; --accent-ink: #160b07;
+  --series: #3987e5; --series-soft: rgba(57,135,229,.20); --series-mid: rgba(57,135,229,.40);
+  --neg: #e66767; --ref: #bfc4c9; --chip-bg: #222528; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1440px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
+header.top { display: grid; gap: 6px; padding-bottom: 16px; border-bottom: 3px solid var(--accent); margin-bottom: 18px; }
+.eyebrow { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-display); font-weight: 800; font-size: clamp(24px, 3.4vw, 36px); letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+.lede { color: var(--ink2); max-width: 75ch; margin: 0; }
+.layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } aside.panel { position: static !important; max-height: none !important; } }
+aside.panel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 24px); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 4px 0 12px; }
+details.grp { border-bottom: 1px solid var(--line); }
+details.grp:last-child { border-bottom: 0; }
+details.grp > summary { list-style: none; cursor: pointer; padding: 12px 16px; font-family: var(--f-display); font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+details.grp > summary::-webkit-details-marker { display: none; }
+details.grp > summary::after { content: "+"; font-family: var(--f-mono); color: var(--muted); }
+details.grp[open] > summary::after { content: "–"; }
+details.grp > summary:focus-visible { outline: 2px solid var(--series); outline-offset: -2px; }
+.grp-body { padding: 0 16px 14px; display: grid; gap: 12px; }
+.grp.plain { border-bottom: 1px solid var(--line); }
+.grp.plain .grp-body { padding-top: 12px; gap: 8px; }
+.runrow { flex-wrap: wrap; justify-content: flex-start; align-items: center; }
+.runrow .hint { margin: 0; }
+.runrow .num { font-family: var(--f-mono); font-size: 12.5px; width: 80px; text-align: right; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; }
+.ctl { display: grid; gap: 4px; }
+.ctl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ctl label { font-size: 12.5px; color: var(--ink2); }
+.ctl .num { font-family: var(--f-mono); font-size: 12.5px; width: 92px; text-align: right; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; }
+.ctl .num:focus-visible, .ctl input[type=range]:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--series); outline-offset: 1px; }
+.ctl input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
+.spread { display: grid; grid-template-columns: auto 1fr 64px; gap: 8px; align-items: center; font-size: 11.5px; color: var(--muted); }
+.spread .num { width: 64px; font-size: 11.5px; }
+.hint { font-size: 11.5px; color: var(--muted); margin: -4px 0 0; }
+.row-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+button, select { font-family: var(--f-body); font-size: 12.5px; color: var(--ink); background: var(--chip-bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+button:hover { border-color: var(--axis); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.check { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink2); }
+.check input { accent-color: var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; padding: 5px 8px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+main.results { display: grid; gap: 18px; min-width: 0; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1100px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+#eq-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#eq-tiles .tile { background: var(--bg); }
+@media (max-width: 480px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.tile .k { font-size: 12px; color: var(--muted); }
+.tile .v { font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: -.01em; }
+.tile .s { font-size: 12px; color: var(--ink2); font-family: var(--f-mono); }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--chip-bg); color: var(--ink); width: fit-content; }
+.pill i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.strip { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px 28px; font-size: 13px; }
+.strip b { font-family: var(--f-mono); font-weight: 500; }
+.strip .lbl { color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; display: grid; gap: 8px; }
+.card h2 { font-family: var(--f-display); font-size: 16px; font-weight: 700; margin: 0; }
+.card .sub { font-size: 12.5px; color: var(--ink2); margin: 0; max-width: 80ch; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 1100px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--f-body); font-size: 11px; fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend .sw { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.legend .ln { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 4px 16px rgba(0,0,0,.12); border-radius: 8px; padding: 8px 10px; font-size: 12px; min-width: 150px; z-index: 5; }
+.tip .h { color: var(--muted); font-size: 11.5px; margin-bottom: 4px; }
+.tip .r { display: flex; justify-content: space-between; gap: 14px; }
+.tip .r b { font-family: var(--f-mono); font-weight: 500; color: var(--ink); }
+.tip .r span { color: var(--ink2); }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { color: var(--muted); font-weight: 500; font-size: 11.5px; }
+td { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+td:first-child { font-family: var(--f-body); color: var(--ink2); }
+.notes { font-size: 13px; color: var(--ink2); display: grid; gap: 8px; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; max-width: 95ch; }
+.busy { opacity: .55; transition: opacity .15s; }
+.status { font-size: 12px; color: var(--muted); font-family: var(--f-mono); }
+@media (prefers-reduced-motion: reduce) { .busy { transition: none; } }
+
+/* PWA y celular */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; -webkit-tap-highlight-color: transparent; }
+[hidden]:not([hidden=until-found i]) { display: none !important; }
+img { max-width: 100%; }
+.wrap { padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 12px)); padding-bottom: max(48px, calc(env(safe-area-inset-bottom, 0px) + 24px)); }
+@media (max-width: 900px) {
+  input[type=number], select, .ctl .num, .runrow .num, .spread .num { font-size: 16px; }
+  .spread { grid-template-columns: auto 1fr 76px; }
+  .spread .num { width: 76px; }
+  .ctl .num { width: 104px; }
+  .ctl input[type=range] { min-height: 28px; }
+  button, select { min-height: 36px; }
+  .seg button { min-height: 34px; }
+}
+@media (max-width: 480px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #eq-tiles { grid-template-columns: minmax(0, 1fr); }
+  .tile { padding: 12px; }
+  .tile .v { font-size: 21px; }
+  .tile .s { font-size: 11px; }
+}
+.jump { display: none; }
+@media (max-width: 900px) {
+  .jump { position: fixed; z-index: 20; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 14px;
+    text-decoration: none; padding: 11px 16px; border-radius: 99px; box-shadow: 0 6px 18px rgba(0,0,0,.22); transition: opacity .2s, transform .2s; }
+  .jump[data-off="1"] { opacity: 0; transform: translateY(12px); pointer-events: none; }
+}
+@media (prefers-reduced-motion: reduce) { .jump { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow" id="eyebrow">Plan de negocios Volterra · Parque Nacional Sierra de las Quijadas · concesión 2027–2046</div>
+    <h1>Montecarlo Sierra de las Quijadas</h1>
+    <p class="lede">Simula miles de trayectorias de visitantes y recalcula el plan completo en cada una: ingresos, OPEX, canon escalonado, CMAA, impuestos e inversión. Inversión y proporciones de costos quedan fijas como en la planilla. Mové los supuestos del panel y los resultados se recalculan solos. Valores en pesos constantes.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" id="panel" aria-label="Supuestos de la simulación"></aside>
+    <a class="jump" id="jump" href="#results">Ver resultados ↓</a>
+
+    <main class="results" id="results">
+      <div class="tiles" id="tiles"></div>
+      <div class="strip" id="strip"></div>
+
+      <section class="card">
+        <h2>Comparación de inversiones</h2>
+        <p class="sub">Los tres cálculos usan exactamente los mismos escenarios aleatorios; solo cambian las inversiones de las filas 11 a 15. «Equilibrio t1» es la planilla actualizada: un único monto en el año 1 y nada después. «Filas 11–15» es el CAPEX que tenía la planilla (infraestructura t1–t6, vehículos cada 5 años y equipamiento en t1 y t11). «Alternativo» cambia solo la infraestructura. El calendario de mantenimiento no cambia y la D&A se recalcula con cada opción. El resto de la página muestra la opción elegida arriba a la izquierda.</p>
+        <div class="tbl-wrap"><table id="tbl-capex"></table></div>
+        <div class="tbl-wrap"><table id="tbl-cmp"></table></div>
+      </section>
+
+      <section class="card">
+        <h2>Inversión total en t1 que iguala la TIR al WACC</h2>
+        <p class="sub" id="eq-sub"></p>
+        <div class="tiles" id="eq-tiles"></div>
+        <p class="sub" id="eq-mc"></p>
+        <div class="chart" id="ch-eq"></div>
+      </section>
+
+      <section class="card">
+        <h2>Visitantes por año</h2>
+        <p class="sub">Bandas de la simulación (P5–P95 y P25–P75) con la mediana. A la izquierda, las visitas reales 2003–2025 de las estadísticas del Parque Nacional. Como referencia se muestra la serie que hoy usa la planilla en KPI (media de la hoja MONTECARLO).</p>
+        <div class="legend" id="lg-visits"></div>
+        <div class="chart" id="ch-visits"></div>
+      </section>
+
+      <div class="two">
+        <section class="card">
+          <h2>VAN Volterra a la tasa de descuento</h2>
+          <p class="sub" id="sub-van"></p>
+          <div class="chart" id="ch-van"></div>
+        </section>
+        <section class="card">
+          <h2>TIR del proyecto</h2>
+          <p class="sub" id="sub-tir"></p>
+          <div class="chart" id="ch-tir"></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2>Saldo final acumulado</h2>
+        <p class="sub" id="sub-cum"></p>
+        <div class="legend" id="lg-cum"></div>
+        <div class="chart" id="ch-cum"></div>
+      </section>
+
+      <div class="two">
+        <section class="card">
+          <h2>Canon + CMAA para el Parque Nacional</h2>
+          <p class="sub" id="sub-pn"></p>
+          <div class="chart" id="ch-pn"></div>
+        </section>
+        <section class="card">
+          <h2>Qué mueve el VAN</h2>
+          <p class="sub">Correlación de rangos (Spearman) entre cada variable aleatoria y el VAN de Volterra. Las barras más largas pesan más en el resultado.</p>
+          <div class="chart" id="ch-drv"></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2>Percentiles</h2>
+        <div class="tbl-wrap"><table id="tbl"></table></div>
+      </section>
+
+      <section class="card notes">
+        <h2>Cómo está construido</h2>
+        <ul>
+          <li><b>Réplica de la planilla (versión «Infraestructura revisada», actualizada el 22/10/2026).</b> El motor reproduce las fórmulas de «Plan de negocios», «KPI» y «FUNDAMENTOS». Con el botón «Replicar Excel» (visitas de KPI, sin aleatoriedad y sin reposiciones después del año 20), a 20 años: con «Equilibrio t1», inversión de $1.383,2 M, VAN $0 y TIR 18,00%, VAN PN $1.477 M; con «Filas 11–15», VAN $91,4 M, TIR 21,13% y VAN PN $1.046 M. Se verificó contra la planilla recalculada con LibreOffice.</li>
+          <li><b>Condiciones de la planilla nueva.</b> Canon tope 10%, base 6% (0,6 × tope) e incremental 8% (0,8 × tope). La D&A amortiza el 80% de cada inversión: inversión × 0,8 / (plazo + 1 − año), acumulada. Comisión del 50% sobre el acceso promedio ($7.532 con el factor subsidiado de 40%) hasta el gatillo de 75.000 visitas acumuladas; después baja 10 pp al cruzarlo y 10 pp más por cada 75.000 visitas, hasta 0%. El estacionamiento lo pagan los visitantes que no toman la experiencia: 25% del precio por vehículo, con 4 ocupantes promedio y sin subsidio.</li>
+          <li><b>Correcciones a Accesos (fila 3), acordadas con el usuario.</b> En la planilla original, el factor subsidiado de 40% se aplicaba dos veces (ya estaba en FUNDAMENTOS!B45 y la fórmula volvía a multiplicar por 1 − C45), y el TRUNC encerraba solo «acumulado − gatillo», así que la baja era continua. Acá y en la planilla entregada el factor se aplica una vez y la baja es escalonada. Con eso la comisión de 20 años pasa de $395 M a $658 M (visitas de KPI).</li>
+          <li><b>Inversión de equilibrio en t1.</b> Se vacían las filas 11 a 15 en todos los años y se calcula el VAN (a 20 años con visitas de KPI: $1.071,6 M al año 0, o sea $1.264,5 M llevado al año 1). Después se busca por iteración el único monto en t1 que deja el VAN en cero con el WACC elegido (TIR = WACC). Da más que el VAN llevado a t1 porque la D&A del monto reduce Ganancias y porque baja el IVA del año 2. Todo el monto cuenta a favor del Parque Nacional (fila 11). El monto de referencia usa los valores centrales; el gráfico repite el cálculo en cada escenario simulado. Con visitas de KPI: 10 años, $1.196,5 M; 20 años, $1.383,2 M; 30 años, $1.411,1 M.</li>
+          <li><b>Plazo de concesión (10 a 30 años).</b> Igual que en la planilla con ESCENARIOS!A2: el VAN, la TIR y el VAN del PN suman los flujos hasta el último año de concesión, y la D&A reparte cada inversión en los años que quedan (plazo + 1 − año), de modo que con un plazo más corto se amortiza más rápido. Para los años 21 a 30 se usan el mantenimiento de la planilla ($1,85 M por año), el tramo de crecimiento «t(21–30)» de ESCENARIOS (1%) y las visitas de KPI hasta 2056. La planilla no repone vehículos ni equipamiento después del año 16. La opción «Reponer después del año 20» (activada por defecto) repite su ciclo: vehículos en los años 21 y 26, y muebles + herramientas en el 21. Al terminar la concesión no se asigna valor residual, y el impuesto a las Ganancias del último año queda fuera, igual que en la planilla.</li>
+          <li><b>Visitas.</b> Tendencia de ramp-up por tramos (año 1 = 2027; los tramos de crecimiento son los de ESCENARIOS) × un «cumplimiento del ramp-up» sorteado por escenario (triangular entre el mínimo, 100% y el máximo) × ruido anual lognormal AR(1) × años de colapso. La volatilidad (~20%) y la frecuencia de colapsos (2020, 2021 y 2023: 3 de 23 años, con caídas de 75–90%) salen del histórico 2003–2025.</li>
+          <li><b>Uso y consumo.</b> Uso de la experiencia, uso de gastronomía, gasto en boutique y % subsidiado se sortean una vez por escenario con una distribución triangular (valor central ± rango). La elasticidad ajusta el uso de la experiencia cuando el precio se aparta de $32.000: uso = uso base × (precio / 32.000)^(−elasticidad), con tope en 95%.</li>
+          <li><b>Capacidad.</b> La demanda anual se reparte en 365 días con un perfil estacional supuesto (julio 15%, enero 12%, fines de semana ×2,2; el día pico es ≈2,9 veces el promedio con intensidad 1). Cada día se atiende como máximo la capacidad. Quien se queda sin experiencia paga estacionamiento, y el cubierto que no se sirve se pierde.</li>
+          <li><b>Canon y CMAA.</b> Igual que en la planilla: CMAA hasta que las visitas acumuladas superan el gatillo o hasta el tope de años. Después, canon = base × tope, luego incremental × tope y finalmente el tope, cada vez que se acumulan las visitas del tramo incremental. El canon se calcula sobre ingresos / 1,21.</li>
+          <li><b>CAPEX alternativo.</b> Reemplaza la infraestructura de t1 a t6 por $55,0 M · $1.064,3 M · $1.062,1 M · $713,4 M · $869,6 M · $635,8 M (total $4.400 M contra $1.131 M) y mantiene vehículos y equipamiento de las filas 12 a 15. Entra en el flujo, en la D&A, en el IVA del año 2 y en el VAN del Parque Nacional, porque la planilla cuenta la infraestructura a favor del PN.</li>
+          <li><b>Particularidades de la planilla que se respetan.</b> RRHH pasa de un monto fijo (+2% anual) al 28% de los ingresos desde el año 7. El canon del año 2 usa la tasa del año 1. El IVA es 12% del saldo del año 1 en el año 2, 4% de IIBB en el año 3 y 7% de IIBB después. Ganancias se paga con un año de rezago. Hay un costo de alojamiento (30%) sin línea de ingresos de alojamiento. En Experiencia, la planilla cobra tarifa completa a la «proporción subsidio» y con descuento al resto; acá los subsidiados pagan con descuento (con 50% da igual).</li>
+          <li><b>ESCENARIOS!B2.</b> La planilla original tenía la TIR fija en 19,10%, cuando la TIR real era 18,42%. En la planilla entregada vale 18%, la TIR con la inversión de equilibrio.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+// ===== Motor del plan de negocios (réplica de la planilla) + Montecarlo =====
+const HMAX = 30; // plazo máximo de concesión admitido (10 a 30 años)
+const Y0 = 2027;
+const INFRA = [5486182.443721149, 798753336.9910634, 105938460.06817679, 71163544.53286251, 86740423.55413097, 63418052.41004527, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const MAINT = [13044000, 11808000, 10572000, 9336000, 8100000, 10104000, 8868000, 7632000, 6396000, 5160000, 7884000, 6648000, 5412000, 4176000, 2940000, 7416000, 5562000, 3708000, 1854000, 1854000, 1854000, 1854000, 1854000, 1854000, 1854000, 1854000, 1854000, 1854000, 1854000, 1854000]; // t21–t30: valores de la planilla
+// CAPEX de infraestructura alternativo (t1–t6), cargado por el usuario el 20/10/2026
+const INFRA_ALT = [55000000.00, 1064302777.78, 1062052777.78, 713427777.78, 869588888.89, 635777777.78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const INFRA_SETS = { orig: INFRA, alt: INFRA_ALT };
+// renew = true repite después del año 20 el ciclo de la planilla: vehículos cada 5 años (t21, t26)
+// y muebles + herramientas cada 10 años (t21). La planilla no tiene reposiciones después de t16.
+function capexFor(infra, renew) {
+  return infra.map((x, i) => {
+    const t = i + 1;
+    let c = x;
+    if (t === 1 || t === 6 || t === 11 || t === 16 || (renew && (t === 21 || t === 26))) c += 162e6 * 1.3; // vehículos
+    if (t === 1) c += 24e6 * 0.7 * 1.3 + 12e6 * 0.75 * 1.3;          // muebles + herramientas
+    if (t === 11 || (renew && t === 21)) c += 24e6 * 1.3 + 12e6 * 1.3;
+    return c;
+  });
+}
+const CAPEX_SETS = { orig: capexFor(INFRA, false), alt: capexFor(INFRA_ALT, false), 'orig|r': capexFor(INFRA, true), 'alt|r': capexFor(INFRA_ALT, true) };
+const capexKey = p => (p.capexSet || 'orig') + (p.renew ? '|r' : '');
+// Inversión única en t1 (filas 11–15 vacías): todo el monto entra en el año 1
+const lumpArr = k => { const a = new Array(HMAX).fill(0); a[0] = k; return a; };
+// Valor presente al año 1 (el año 1 no se descuenta)
+function pv1(arr, w, H) { let s = 0; for (let i = 0; i < H; i++) s += arr[i] / Math.pow(1 + w, i); return s; }
+const V_EXCEL = [25102, 24334, 25977, 28609, 31867, 35667, 38583, 40296, 42107, 43484, 44335, 46411, 48393, 49547, 50871, 51311, 52423, 54945, 56440, 58085, 59270, 61722, 65227, 67518, 72849, 77012, 77686, 80753, 84511, 91193]; // MONTECARLO!D2:D31
+const HIST_YEARS = [2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+const HIST_V = [31291, 27648, 29004, 19271, 35590, 34511, 33904, 31446, 30559, 27852, 27779, 29487, 24783, 23225, 17998, 20890, 23017, 2365, 2211, 36995, 5385, 21130, 16787];
+const ACC_MIX = 12000 * (1 - 714 / 16787) + 25000 * (714 / 16787); // FUNDAMENTOS!B45 antes del factor subsidiado
+const P_REF = 32000; // precio de referencia de la experiencia en la planilla
+
+// Estacionalidad supuesta (no hay datos mensuales en la planilla): participación mensual y fines de semana ×2,2
+const MONTH_SHARE = [12, 10, 8, 9, 6, 5, 15, 8, 7, 8, 6, 6];
+const BASE_W = (() => {
+  const w = [];
+  for (let m = 0; m < 12; m++) {
+    const days = new Date(Y0, m + 1, 0).getDate();
+    const dw = [];
+    for (let d = 1; d <= days; d++) {
+      const wd = new Date(Y0, m, d).getDay();
+      dw.push(wd === 0 || wd === 6 ? 2.2 : 1);
+    }
+    const s = dw.reduce((a, b) => a + b, 0);
+    dw.forEach(x => w.push(MONTH_SHARE[m] / 100 * x / s));
+  }
+  const tot = w.reduce((a, b) => a + b, 0);
+  return w.map(x => x / tot).sort((a, b) => b - a); // descendente
+})();
+const ND = BASE_W.length;
+
+function seasonWeights(k) {
+  const w = new Float64Array(ND);
+  let s = 0;
+  for (let i = 0; i < ND; i++) { w[i] = Math.max(0.1 / ND, 1 / ND + k * (BASE_W[i] - 1 / ND)); s += w[i]; }
+  const tail = new Float64Array(ND + 1);
+  for (let i = ND - 1; i >= 0; i--) { w[i] /= s; tail[i] = tail[i + 1] + w[i]; }
+  return { w, tail };
+}
+// Demanda anual D repartida por día; se atiende como máximo C por día
+function served(D, C, sw) {
+  if (D <= 0) return 0;
+  const thr = C / D, w = sw.w;
+  let lo = 0, hi = ND; // primer índice con w <= thr
+  while (lo < hi) { const m = (lo + hi) >> 1; if (w[m] > thr) lo = m + 1; else hi = m; }
+  return lo * C + D * sw.tail[lo];
+}
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function normal(r) { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+function tri(r, a, c, b) {
+  if (b - a < 1e-12) return c;
+  c = Math.min(b, Math.max(a, c));
+  const u = r(), F = (c - a) / (b - a);
+  return u < F ? a + Math.sqrt(u * (b - a) * (c - a)) : b - Math.sqrt((1 - u) * (b - a) * (b - c));
+}
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+
+function irr(f) {
+  const npv = r => { let s = 0, d = 1; for (let i = 0; i < f.length; i++) { d /= (1 + r); s += f[i] * d; } return s; };
+  // Busca, de mayor a menor tasa, el primer cambio de signo de la curva VAN(r) y lo refina por bisección
+  const G = [-0.9, -0.7, -0.5, -0.35, -0.2, -0.1, 0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 0.8, 1, 1.5, 2, 3];
+  let hi = G[G.length - 1], fhi = npv(hi);
+  for (let j = G.length - 2; j >= 0; j--) {
+    const lo = G[j], flo = npv(lo);
+    if (flo * fhi <= 0) {
+      let a = lo, b = hi, fa = flo;
+      for (let k = 0; k < 60; k++) { const m = (a + b) / 2, fm = npv(m); if (fa * fm <= 0) b = m; else { a = m; fa = fm; } }
+      return (a + b) / 2;
+    }
+    hi = lo; fhi = flo;
+  }
+  return NaN;
+}
+
+// Un escenario: recibe la trayectoria de visitas y los parámetros ya sorteados
+function evalPlan(V, p, d, sw) {
+  const H = V.length; // plazo de concesión: D&A reparte cada inversión en los años que quedan (plazo + 1 − t)
+  // INF = lo que la planilla cuenta a favor del PN (fila 11). Con la inversión única en t1 cuenta el monto entero.
+  let INF, CAPEX;
+  if (p._lump !== undefined) { INF = CAPEX = lumpArr(p._lump); }
+  else { INF = INFRA_SETS[p.capexSet || 'orig']; CAPEX = CAPEX_SETS[capexKey(p)]; }
+  const daF = p.daF === undefined ? 0.8 : p.daF;
+  const rev = new Float64Array(H), flow = new Float64Array(H), canon = new Float64Array(H), cmaa = new Float64Array(H), rate = new Float64Array(H);
+  const ga = new Float64Array(H), bo = new Float64Array(H), accA = new Float64Array(H);
+  const uE = Math.min(0.95, d.uExp * Math.pow(p.price / P_REF, -d.eps));
+  const pmix = (1 - d.sub) + d.sub * p.disc;
+  const capG = p.mesas * p.cub * p.rot;
+  const accAvg = ACC_MIX * (1 - p.accSub); // acceso promedio con el factor subsidiado aplicado una sola vez
+  let cumA = 0;
+  for (let i = 0; i < H; i++) {
+    const v = V[i];
+    cumA += v;
+    const dE = v * uE;
+    const sE = p.capOn ? served(dE, p.capE, sw) : dE;
+    const ex = sE * p.price * pmix;
+    const est = (v - sE) * p.price * p.du / p.occ; // estacionamiento: quienes no toman la experiencia, por vehículo
+    const dG = v * d.uG;
+    const sG = p.capOn ? served(dG, capG, sw) : dG;
+    ga[i] = sG * p.ticket;
+    bo[i] = v * d.bout;
+    // Comisión sobre accesos: tope hasta el gatillo; después baja comDec por cada comStep visitas acumuladas (escalonada)
+    const rc = cumA < p.trig ? p.com : p.com - (Math.trunc((cumA - p.trig) / p.comStep) + 1) * p.comDec;
+    accA[i] = Math.max(0, rc) * v * accAvg;
+    rev[i] = ex + accA[i] + est + ga[i] + bo[i];
+  }
+  // Canon escalonado por visitas acumuladas (KPI filas 19–27)
+  let cum = 0, s21 = 0, s23 = 0, s25 = 0;
+  const cumV = new Float64Array(H);
+  for (let i = 0; i < H; i++) {
+    cum += V[i]; cumV[i] = cum;
+    if (cum / p.trig > 1) s21 += V[i];
+    if (s21 / p.incr > 1) s23 += V[i];
+    if (s23 / p.incr > 1) s25 += V[i];
+    rate[i] = s21 === 0 ? 0 : s23 === 0 ? p.fBase * p.ctop : s25 === 0 ? p.ctop * p.fInc : p.ctop;
+  }
+  const r23 = new Float64Array(H), r27 = new Float64Array(H), r35 = new Float64Array(H), r48 = new Float64Array(H), r50 = new Float64Array(H), da = new Float64Array(H);
+  let rrhh = 0;
+  const disc = new Float64Array(H);
+  let van = 0, vanPN = 0, vanCanon = 0;
+  for (let i = 0; i < H; i++) {
+    const t = i + 1, R = rev[i];
+    const cg = t <= 5 ? ga[i] * 0.35 : ga[i] * 0.20;
+    r23[i] = MAINT[i] + R * 0.02671 + cg + bo[i] * 0.3;
+    rrhh = t === 1 ? 170e6 : t <= 6 ? rrhh * 1.02 : R * 0.28;
+    r27[i] = r23[i] + rrhh + R * 0.04;
+    r35[i] = (t <= 15 ? R * 0.04 : R * 0.07) + R * 0.095;
+    canon[i] = R / 1.21 * (t === 2 ? rate[0] : rate[i]); // la planilla usa la tasa del año 1 en el año 2
+    if (t === 1) cmaa[i] = V[0] < p.trig ? p.cmaaAcc * p.cmaaPrice : 0;
+    else cmaa[i] = (cumV[i] > p.trig || t > p.cmaaYears) ? 0 : p.cmaaAcc * p.cmaaPrice;
+    const iibb = R * 0.042;
+    r48[i] = r27[i] + r35[i] + canon[i] + cmaa[i] + iibb;
+    r50[i] = R - r48[i];
+    da[i] = (i === 0 ? 0 : da[i - 1]) + CAPEX[i] * daF / (H + 1 - t); // la planilla amortiza el 80% de cada inversión
+    let iva = 0;
+    if (t === 2) iva = Math.max(0, rev[0] - CAPEX[0] - r23[0] - r27[0] - r35[0]) * 0.12;
+    else if (t === 3) iva = iibb * 0.04;
+    else if (t >= 4) iva = iibb * 0.07;
+    const gan = t === 1 ? 0 : Math.max(0, r50[i - 1] - da[i - 1]) * 0.35;
+    flow[i] = R - (r48[i] + CAPEX[i] + iva + gan);
+    disc[i] = Math.pow(1 + p.wacc, t);
+    van += flow[i] / disc[i];
+    vanPN += (INF[i] + cmaa[i] + canon[i]) / disc[i];
+    vanCanon += (cmaa[i] + canon[i]) / disc[i];
+  }
+  return { rev, flow, canon, cmaa, rate, van, vanPN, vanCanon, uE, da, acc: accA, capex: CAPEX };
+}
+
+function trendPath(p, f) {
+  const H = p.plazo;
+  const T = new Float64Array(H);
+  if (p.traj === 'excel') { for (let i = 0; i < H; i++) T[i] = V_EXCEL[i]; return T; }
+  T[0] = p.v1;
+  for (let t = 2; t <= H; t++) {
+    const g = t <= 5 ? p.g1 : t <= 10 ? p.g2 : t <= 15 ? p.g3 : t <= 20 ? p.g4 : p.g5;
+    T[t - 1] = T[t - 2] * (1 + g * f);
+  }
+  return T;
+}
+
+const DRIVERS = [
+  ['f', 'Cumplimiento del ramp-up'],
+  ['noise', 'Desvío anual de visitas (promedio)'],
+  ['shocks', 'Años de colapso'],
+  ['uExp', 'Uso de la experiencia'],
+  ['eps', 'Elasticidad al precio'],
+  ['uG', 'Uso de gastronomía'],
+  ['bout', 'Gasto en boutique'],
+  ['sub', '% de pasajeros subsidiados'],
+  ['seas', 'Estacionalidad']
+];
+
+// Inversión única en t1 que lleva el VAN a 0, es decir, TIR = WACC. Las filas 11–15 quedan vacías en todos los años.
+// Devuelve { k, van0 }: van0 es el VAN sin ninguna inversión (descontado al año 0, como en la planilla).
+// El monto incluye sus efectos: D&A (80%, en los años de concesión) que baja Ganancias e IVA del año 2.
+function breakEven(V, p, d, sw) {
+  const f = k => evalPlan(V, Object.assign({}, p, { _lump: k }), d, sw).van;
+  const van0 = f(0);
+  if (van0 <= 0) return { k: 0, van0 };
+  let k0 = 0, f0 = van0, k1 = van0 * (1 + p.wacc), f1 = f(k1);
+  for (let it = 0; it < 40 && Math.abs(f1) > 1e-3; it++) {
+    if (f1 === f0) break;
+    let k2 = k1 - f1 * (k1 - k0) / (f1 - f0);
+    if (!(k2 > 0)) k2 = k1 / 2;
+    k0 = k1; f0 = f1; k1 = k2; f1 = f(k1);
+  }
+  return { k: k1, van0 };
+}
+function centralDraw(p) { return { f: clamp(1, p.rmin, p.rmax), uExp: p.uExp, eps: p.eps, uG: p.uG, bout: p.bout, sub: p.sub, seas: p.seas }; }
+// Equilibrio con valores centrales (sin aleatoriedad)
+function equilibrium(p) {
+  const H = Math.max(10, Math.min(HMAX, Math.round(p.plazo || 20)));
+  p = Object.assign({}, p, { plazo: H }); delete p._lump;
+  const d = centralDraw(p), V = trendPath(p, d.f), sw = seasonWeights(p.seas);
+  const be = breakEven(V, p, d, sw);
+  return { k: be.k, van0: be.van0, H,
+    pvOrig: pv1(CAPEX_SETS[capexKey(Object.assign({}, p, { capexSet: 'orig' }))], p.wacc, H),
+    pvAlt: pv1(CAPEX_SETS[capexKey(Object.assign({}, p, { capexSet: 'alt' }))], p.wacc, H) };
+}
+
+function simulate(p, N, seed, deterministic) {
+  const H = Math.max(10, Math.min(HMAX, Math.round(p.plazo || 20)));
+  p = Object.assign({}, p, { plazo: H });
+  if (p.capexSet === 'eq' && p._lump === undefined) p._lump = equilibrium(p).k;
+  if (p.capexSet !== 'eq') delete p._lump;
+  const r = mulberry32(seed >>> 0);
+  const out = {
+    N, H, be: p.calcBE ? new Float64Array(N) : null, van0: p.calcBE ? new Float64Array(N) : null, van: new Float64Array(N), tir: new Float64Array(N), vanPN: new Float64Array(N), vanCanon: new Float64Array(N),
+    visits: Array.from({ length: H }, () => new Float64Array(N)),
+    cumFlow: Array.from({ length: H }, () => new Float64Array(N)),
+    pnYear: Array.from({ length: H }, () => new Float64Array(N)),
+    year12: new Float64Array(N), payback: new Float64Array(N), cumVisits: new Float64Array(N),
+    drv: Object.fromEntries(DRIVERS.map(([k]) => [k, new Float64Array(N)]))
+  };
+  const V = new Float64Array(H);
+  const swCache = new Map();
+  for (let n = 0; n < N; n++) {
+    let d;
+    if (deterministic) {
+      d = centralDraw(p);
+    } else {
+      d = {
+        f: tri(r, p.rmin, 1, p.rmax),
+        uExp: clamp(tri(r, p.uExp - p.uExpS, p.uExp, p.uExp + p.uExpS), 0, 1),
+        eps: Math.max(0, p.eps - p.epsS + 2 * p.epsS * r()),
+        uG: clamp(tri(r, p.uG - p.uGS, p.uG, p.uG + p.uGS), 0, 1),
+        bout: Math.max(0, tri(r, p.bout * (1 - p.boutS), p.bout, p.bout * (1 + p.boutS))),
+        sub: clamp(tri(r, p.sub - p.subS, p.sub, p.sub + p.subS), 0, 1),
+        seas: Math.max(0, tri(r, p.seas - p.seasS, p.seas, p.seas + p.seasS))
+      };
+    }
+    const T = trendPath(p, d.f);
+    let e = 0, eSum = 0, shocks = 0;
+    for (let i = 0; i < H; i++) {
+      let v = T[i];
+      if (!deterministic) {
+        const z = normal(r);
+        e = i === 0 ? p.sigma * z : p.rho * e + p.sigma * Math.sqrt(1 - p.rho * p.rho) * z;
+        eSum += e;
+        v *= Math.exp(e);
+        if (r() < p.shp) { shocks++; v *= 1 - (p.slo + (p.shi - p.slo) * r()); }
+      }
+      V[i] = v;
+    }
+    d.noise = eSum / H; d.shocks = shocks;
+    const sk = deterministic ? p.seas : Math.round(d.seas * 50) / 50;
+    let sw = swCache.get(sk);
+    if (!sw) { sw = seasonWeights(sk); swCache.set(sk, sw); }
+    const res = evalPlan(V, p, d, sw);
+    if (p.calcBE) { const b = breakEven(V.slice(), p, d, sw); out.be[n] = b.k; out.van0[n] = b.van0; }
+    out.van[n] = res.van; out.tir[n] = irr(res.flow); out.vanPN[n] = res.vanPN; out.vanCanon[n] = res.vanCanon;
+    let c = 0, lastNeg = -1, cv = 0, y12 = 0;
+    for (let i = 0; i < H; i++) {
+      out.visits[i][n] = V[i]; cv += V[i];
+      c += res.flow[i]; out.cumFlow[i][n] = c; if (c < 0) lastNeg = i;
+      out.pnYear[i][n] = res.canon[i] + res.cmaa[i];
+      if (!y12 && res.rate[i] >= p.ctop - 1e-12 && p.ctop > 0) y12 = i + 1;
+    }
+    out.payback[n] = lastNeg === H - 1 ? Infinity : lastNeg + 2; // año en que el acumulado queda positivo
+    out.year12[n] = y12 || Infinity;
+    out.cumVisits[n] = cv;
+    for (const [k] of DRIVERS) out.drv[k][n] = d[k];
+  }
+  return out;
+}
+
+if (typeof module !== 'undefined') module.exports = { equilibrium, breakEven, pv1, INFRA_SETS, CAPEX_SETS, capexKey, simulate, evalPlan, trendPath, irr, V_EXCEL, seasonWeights, served, BASE_W };
+
+</script>
+<script>
+(function () {
+'use strict';
+const $ = s => document.querySelector(s);
+const fmtInt = x => Math.round(x).toLocaleString('es-AR');
+const fmtM = x => { if (!isFinite(x)) return '—'; let m = x / 1e6; if (Math.abs(m) < 0.05) m = 0; const a = Math.abs(m); return (m < 0 ? '−' : '') + '$' + a.toLocaleString('es-AR', { maximumFractionDigits: a >= 100 ? 0 : 1 }) + ' M'; };
+const fmtPct = (x, d = 1) => isFinite(x) ? (x < 0 ? '−' : '') + Math.abs(x * 100).toLocaleString('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d }) + '%' : '—';
+const lastYear = () => Y0 + (LAST ? LAST.sim.H : S.plazo) - 1;
+const fmtYear = x => isFinite(x) ? String(Y0 + Math.round(x) - 1) : 'después de ' + lastYear();
+
+// ---------- Definición de controles ----------
+// scale: valor mostrado = valor del modelo × scale
+const GROUPS = [
+  { id: 'run', title: 'Simulación', plain: true, items: [
+    { id: 'plazo', label: 'Plazo de concesión (años)', min: 10, max: 30, step: 1, val: 20, scale: 1, d: 0 },
+    { type: 'renew' }, { type: 'capex' }, { type: 'actions' }, { type: 'nsim' }] },
+  { id: 'vis', title: 'Visitas y ramp-up', open: true, items: [
+    { type: 'traj' },
+    { type: 'presets' },
+    { id: 'v1', label: 'Visitas año 1 (2027)', min: 3000, max: 40000, step: 500, val: 16500, scale: 1, d: 0 },
+    { id: 'g1', label: 'Crecimiento anual, años 1–5', min: 0, max: 40, step: 0.5, val: 0.20, scale: 100, d: 1, unit: '%' },
+    { id: 'g2', label: 'Crecimiento anual, años 6–10', min: 0, max: 20, step: 0.5, val: 0.07, scale: 100, d: 1, unit: '%' },
+    { id: 'g3', label: 'Crecimiento anual, años 11–15', min: 0, max: 15, step: 0.5, val: 0.03, scale: 100, d: 1, unit: '%' },
+    { id: 'g4', label: 'Crecimiento anual, años 16–20', min: 0, max: 10, step: 0.5, val: 0.02, scale: 100, d: 1, unit: '%' },
+    { id: 'g5', label: 'Crecimiento anual, años 21–30', min: 0, max: 10, step: 0.5, val: 0.01, scale: 100, d: 1, unit: '%', hint: 'Solo pesa si el plazo es mayor a 20 años.' },
+    { id: 'rmin', label: 'Cumplimiento del ramp-up: mínimo', min: 0, max: 100, step: 5, val: 0.40, scale: 100, d: 0, unit: '%' },
+    { id: 'rmax', label: 'Cumplimiento del ramp-up: máximo', min: 100, max: 200, step: 5, val: 1.30, scale: 100, d: 0, unit: '%', hint: 'Cada escenario multiplica los crecimientos por un factor triangular entre el mínimo, 100% y el máximo.' },
+    { id: 'sigma', label: 'Volatilidad anual de visitas', min: 0, max: 50, step: 1, val: 0.20, scale: 100, d: 0, unit: '%' },
+    { id: 'rho', label: 'Persistencia del desvío (ρ)', min: 0, max: 90, step: 5, val: 0.15, scale: 100, d: 0, unit: '%' },
+    { id: 'shp', label: 'Probabilidad anual de colapso', min: 0, max: 30, step: 1, val: 0.10, scale: 100, d: 0, unit: '%' },
+    { id: 'slo', label: 'Caída en año de colapso: mínima', min: 0, max: 100, step: 5, val: 0.60, scale: 100, d: 0, unit: '%' },
+    { id: 'shi', label: 'Caída en año de colapso: máxima', min: 0, max: 100, step: 5, val: 0.90, scale: 100, d: 0, unit: '%' }
+  ]},
+  { id: 'uso', title: 'Precios, uso y consumo', open: true, items: [
+    { id: 'price', label: 'Precio de la experiencia ($)', min: 10000, max: 80000, step: 1000, val: 32000, scale: 1, d: 0 },
+    { id: 'uExp', label: 'Visitantes que toman la experiencia', min: 5, max: 95, step: 1, val: 0.50, scale: 100, d: 0, unit: '%', spread: { id: 'uExpS', val: 0.10, max: 30, step: 1, scale: 100, unit: 'pp' } },
+    { id: 'eps', label: 'Elasticidad al precio', min: 0, max: 3, step: 0.1, val: 0.8, scale: 1, d: 1, spread: { id: 'epsS', val: 0.4, max: 1.5, step: 0.1, scale: 1, unit: '' }, hint: 'Solo actúa cuando el precio se aparta de $32.000.' },
+    { id: 'sub', label: 'Pasajeros con tarifa subsidiada', min: 0, max: 100, step: 1, val: 0.50, scale: 100, d: 0, unit: '%', spread: { id: 'subS', val: 0.10, max: 30, step: 1, scale: 100, unit: 'pp' } },
+    { id: 'disc', label: 'Tarifa subsidiada (% del precio)', min: 0, max: 100, step: 5, val: 0.50, scale: 100, d: 0, unit: '%' },
+    { id: 'du', label: 'Estacionamiento (% del precio)', min: 0, max: 60, step: 1, val: 0.25, scale: 100, d: 0, unit: '%', hint: 'Lo pagan por vehículo los visitantes que no toman la experiencia.' },
+    { id: 'occ', label: 'Ocupantes promedio por vehículo', min: 1, max: 8, step: 0.5, val: 4, scale: 1, d: 1 },
+    { id: 'ticket', label: 'Ticket de gastronomía ($)', min: 10000, max: 80000, step: 500, val: 37500, scale: 1, d: 0 },
+    { id: 'uG', label: 'Visitantes que usan gastronomía', min: 5, max: 90, step: 1, val: 0.30, scale: 100, d: 0, unit: '%', spread: { id: 'uGS', val: 0.10, max: 30, step: 1, scale: 100, unit: 'pp' } },
+    { id: 'bout', label: 'Gasto en boutique por visitante ($)', min: 0, max: 10000, step: 100, val: 1500, scale: 1, d: 0, spread: { id: 'boutS', val: 0.30, max: 80, step: 5, scale: 100, unit: '%' } },
+    { id: 'com', label: 'Comisión sobre accesos: tope', min: 0, max: 100, step: 1, val: 0.50, scale: 100, d: 0, unit: '%', hint: 'Rige hasta que las visitas acumuladas alcanzan el gatillo (grupo «Canon y CMAA»).' },
+    { id: 'comDec', label: 'Comisión: baja por tramo', min: 0, max: 50, step: 1, val: 0.10, scale: 100, d: 0, unit: 'pp' },
+    { id: 'comStep', label: 'Comisión: tramo (miles de visitas acumuladas)', min: 10, max: 300, step: 5, val: 75000, scale: 0.001, d: 0, hint: 'Al pasar el gatillo baja un tramo y después otro cada vez que se acumula esta cantidad de visitas, hasta 0%.' },
+    { id: 'accSub', label: 'Accesos: factor subsidiado', min: 0, max: 100, step: 1, val: 0.40, scale: 100, d: 0, unit: '%', hint: 'Descuento sobre el acceso promedio de $12.553. Con 40%, $7.532. Se aplica una sola vez.' }
+  ]},
+  { id: 'cap', title: 'Capacidad', open: false, items: [
+    { type: 'capOn' },
+    { id: 'capE', label: 'Experiencia: pasajeros por día', min: 50, max: 1500, step: 10, val: 300, scale: 1, d: 0 },
+    { id: 'mesas', label: 'Gastronomía: mesas', min: 10, max: 150, step: 1, val: 50, scale: 1, d: 0 },
+    { id: 'cub', label: 'Cubiertos por mesa', min: 2, max: 8, step: 1, val: 4, scale: 1, d: 0 },
+    { id: 'rot', label: 'Rotaciones por día', min: 1, max: 4, step: 0.5, val: 2, scale: 1, d: 1 },
+    { id: 'seas', label: 'Intensidad de la estacionalidad', min: 0, max: 2, step: 0.1, val: 1, scale: 1, d: 1, spread: { id: 'seasS', val: 0.3, max: 1, step: 0.1, scale: 1, unit: '' }, hint: '0 = demanda pareja todo el año; 1 = perfil supuesto (pico ≈2,9× el día promedio).' }
+  ]},
+  { id: 'canon', title: 'Canon y CMAA', open: false, items: [
+    { id: 'ctop', label: 'Canon tope (s/ ingresos netos de IVA)', min: 0, max: 25, step: 0.5, val: 0.10, scale: 100, d: 1, unit: '%' },
+    { id: 'fBase', label: 'Canon base (% del tope)', min: 0, max: 100, step: 'any', val: 0.6, scale: 100, d: 1, unit: '%' },
+    { id: 'fInc', label: 'Canon incremental (% del tope)', min: 0, max: 100, step: 'any', val: 0.8, scale: 100, d: 1, unit: '%' },
+    { id: 'trig', label: 'Gatillo: visitas acumuladas (miles)', min: 10, max: 300, step: 5, val: 75000, scale: 0.001, d: 0, hint: 'Fin del CMAA, inicio del canon base y comienzo de la baja de la comisión sobre accesos.' },
+    { id: 'incr', label: 'Tramo incremental (miles de visitas)', min: 10, max: 300, step: 5, val: 75000, scale: 0.001, d: 0 },
+    { id: 'cmaaAcc', label: 'CMAA: accesos equivalentes por año', min: 0, max: 10000, step: 100, val: 1500, scale: 1, d: 0 },
+    { id: 'cmaaPrice', label: 'CMAA: valor del acceso ($)', min: 0, max: 50000, step: 500, val: 12000, scale: 1, d: 0 },
+    { id: 'cmaaYears', label: 'CMAA: tope de años', min: 0, max: 10, step: 1, val: 3, scale: 1, d: 0 }
+  ]},
+  { id: 'fin', title: 'Tasa de descuento y amortización', open: false, items: [
+    { id: 'wacc', label: 'Tasa de descuento (WACC)', min: 5, max: 40, step: 0.5, val: 0.18, scale: 100, d: 1, unit: '%' },
+    { id: 'daF', label: 'Porción amortizable de cada inversión (D&A)', min: 0, max: 100, step: 5, val: 0.80, scale: 100, d: 0, unit: '%', hint: 'Planilla: D&A = inversión × 80% / (plazo + 1 − año). Reduce Ganancias.' }
+  ]}
+];
+const DEFAULTS = {};
+GROUPS.forEach(g => g.items.forEach(it => { if (it.id) { DEFAULTS[it.id] = it.val; if (it.spread) DEFAULTS[it.spread.id] = it.spread.val; } }));
+Object.assign(DEFAULTS, { renew: true, capexSet: 'eq', traj: 'tramos', capOn: true, N: (window.matchMedia && matchMedia('(max-width: 900px)').matches) ? 1000 : 5000, seed: 2027 });
+let S = Object.assign({}, DEFAULTS);
+const CTL = {};
+
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) { if (k === 'text') e.textContent = attrs[k]; else if (k === 'class') e.className = attrs[k]; else e.setAttribute(k, attrs[k]); }
+  kids.forEach(k => k && e.appendChild(k));
+  return e;
+}
+function numCtl(def, onChange) {
+  const sc = def.scale;
+  const range = el('input', { type: 'range', id: def.id, min: def.min, max: def.max, step: def.step });
+  const num = el('input', { type: 'number', class: 'num', id: def.id + '-n', min: def.min, max: def.max, step: def.step === 'any' ? 0.1 : def.step, 'aria-label': def.label });
+  const set = v => { range.value = v * sc; num.value = +(v * sc).toFixed(def.d === undefined ? 2 : Math.max(def.d, 1)); };
+  range.addEventListener('input', () => { S[def.id] = +range.value / sc; num.value = +(+range.value).toFixed(Math.max(def.d || 0, 1)); onChange(); });
+  num.addEventListener('change', () => { const v = +num.value; if (isFinite(v)) { S[def.id] = v / sc; range.value = v; onChange(); } });
+  CTL[def.id] = set;
+  set(S[def.id]);
+  return { range, num };
+}
+function buildPanel() {
+  const panel = $('#panel');
+  GROUPS.forEach(g => {
+    const body = el('div', { class: 'grp-body' });
+    const det = g.plain ? el('div', { class: 'grp plain', id: 'grp-' + g.id }, body) : el('details', { class: 'grp', id: 'grp-' + g.id }, el('summary', { text: g.title }), body);
+    if (g.open && window.innerWidth > 900) det.open = true;
+    g.items.forEach(it => {
+      if (it.type === 'traj') {
+        const seg = el('div', { class: 'seg', role: 'group', 'aria-label': 'Trayectoria base de visitas' });
+        [['tramos', 'Ramp-up por tramos'], ['excel', 'Serie actual del Excel']].forEach(([v, t]) => {
+          const b = el('button', { type: 'button', id: 'traj-' + v, text: t });
+          b.addEventListener('click', () => { S.traj = v; syncTraj(); schedule(); });
+          seg.appendChild(b);
+        });
+        body.appendChild(el('div', { class: 'ctl' }, el('label', { text: 'Trayectoria base' }), seg));
+        return;
+      }
+      if (it.type === 'renew') {
+        const cb = el('input', { type: 'checkbox', id: 'renew' });
+        cb.checked = S.renew;
+        cb.addEventListener('change', () => { S.renew = cb.checked; schedule(); });
+        CTL.renew = v => { cb.checked = v; };
+        body.appendChild(el('label', { class: 'check', for: 'renew' }, cb, document.createTextNode('Reponer vehículos y equipamiento después del año 20 (solo filas 11–15 y alternativo)')));
+        return;
+      }
+      if (it.type === 'capex') {
+        const seg = el('div', { class: 'seg', role: 'group', 'aria-label': 'Inversiones' });
+        [['eq', 'Equilibrio t1'], ['orig', 'Filas 11–15'], ['alt', 'Alternativo']].forEach(([v, t]) => {
+          const b = el('button', { type: 'button', id: 'capex-' + v, text: t });
+          b.addEventListener('click', () => { S.capexSet = v; syncCapex(); schedule(); });
+          seg.appendChild(b);
+        });
+        body.appendChild(el('div', { class: 'ctl' }, el('label', { text: 'Inversiones' }), seg));
+        body.appendChild(el('p', { class: 'hint', text: '«Equilibrio t1»: filas 11–15 vacías y un único monto en el año 1 que deja TIR = WACC (planilla actualizada). «Filas 11–15»: el CAPEX que tenía la planilla. «Alternativo»: la infraestructura revisada del 20/10.' }));
+        return;
+      }
+      if (it.type === 'presets') {
+        const row = el('div', { class: 'row-btns' });
+        const P = [['ESCENARIOS', [.20, .07, .03, .02, .01]], ['Pesimista', [.05, .03, .02, .01, .01]], ['Base', [.12, .06, .03, .02, .01]], ['Optimista', [.20, .10, .05, .02, .01]]];
+        P.forEach(([n, g]) => {
+          const b = el('button', { type: 'button', text: n, id: 'pre-' + n });
+          b.addEventListener('click', () => { S.traj = 'tramos'; ['g1', 'g2', 'g3', 'g4', 'g5'].forEach((k, i) => { S[k] = g[i]; CTL[k](g[i]); }); S.v1 = 16500; CTL.v1(16500); syncTraj(); schedule(); });
+          row.appendChild(b);
+        });
+        body.appendChild(el('div', { class: 'ctl' }, el('label', { text: 'Tramos de la planilla (ESCENARIOS / SENSIBILIZACIÓN)' }), row));
+        return;
+      }
+      if (it.type === 'capOn') {
+        const cb = el('input', { type: 'checkbox', id: 'capOn' });
+        cb.checked = S.capOn;
+        cb.addEventListener('change', () => { S.capOn = cb.checked; schedule(); });
+        CTL.capOn = v => { cb.checked = v; };
+        body.appendChild(el('label', { class: 'check', for: 'capOn' }, cb, document.createTextNode('Aplicar tope de capacidad diaria')));
+        return;
+      }
+      if (it.type === 'nsim') {
+        const sel = el('select', { id: 'nsim', 'aria-label': 'Cantidad de escenarios' });
+        [1000, 5000, 10000, 20000].forEach(n => { const o = el('option', { value: n, text: fmtInt(n) + ' escenarios' }); if (n === S.N) o.selected = true; sel.appendChild(o); });
+        sel.addEventListener('change', () => { S.N = +sel.value; schedule(); });
+        CTL.N = v => { sel.value = v; };
+        const seed = el('input', { type: 'number', class: 'num', id: 'seed', 'aria-label': 'Semilla' });
+        seed.value = S.seed;
+        seed.addEventListener('change', () => { S.seed = +seed.value | 0; schedule(); });
+        CTL.seed = v => { seed.value = v; };
+        body.appendChild(el('div', { class: 'ctl-head runrow' }, el('label', { for: 'nsim', class: 'hint', text: 'Escenarios' }), sel, el('label', { for: 'seed', class: 'hint', text: 'Semilla' }), seed));
+        return;
+      }
+      if (it.type === 'actions') {
+        const b1 = el('button', { type: 'button', class: 'primary', id: 'btn-excel', text: 'Replicar Excel' });
+        const b2 = el('button', { type: 'button', id: 'btn-seed', text: 'Nueva semilla' });
+        const b3 = el('button', { type: 'button', id: 'btn-reset', text: 'Restablecer' });
+        b1.addEventListener('click', replicateExcel);
+        b2.addEventListener('click', () => { S.seed = (Math.random() * 1e6) | 0; CTL.seed(S.seed); schedule(); });
+        b3.addEventListener('click', () => { applyState(Object.assign({}, DEFAULTS, { capexSet: S.capexSet, plazo: S.plazo })); });
+        body.appendChild(el('div', { class: 'row-btns' }, b1, b2, b3));
+        body.appendChild(el('p', { class: 'hint', text: '«Replicar Excel» usa la serie de visitas de KPI y apaga toda la aleatoriedad para verificar contra la planilla.' }));
+        return;
+      }
+      const { range, num } = numCtl(it, schedule);
+      const lab = el('label', { for: it.id, text: it.label + (it.unit ? ' (' + it.unit + ')' : '') });
+      const box = el('div', { class: 'ctl' }, el('div', { class: 'ctl-head' }, lab, num), range);
+      if (it.spread) {
+        const sp = it.spread;
+        const sdef = { id: sp.id, min: 0, max: sp.max, step: sp.step, scale: sp.scale, d: sp.step < 1 ? 1 : 0, label: 'Rango ± de ' + it.label };
+        const r2 = numCtl(sdef, schedule);
+        box.appendChild(el('div', { class: 'spread' }, el('span', { text: '± rango' + (sp.unit ? ' (' + sp.unit + ')' : '') }), r2.range, r2.num));
+      }
+      if (it.hint) box.appendChild(el('p', { class: 'hint', text: it.hint }));
+      body.appendChild(box);
+    });
+    panel.appendChild(det);
+  });
+  syncTraj();
+}
+function syncCapex() {
+  ['orig', 'alt', 'eq'].forEach(k => $('#capex-' + k).setAttribute('aria-pressed', S.capexSet === k));
+  const r = document.getElementById('renew'); if (r) r.closest('label').style.opacity = S.capexSet === 'eq' ? .45 : 1;
+}
+function syncTraj() {
+  syncCapex();
+  $('#traj-tramos').setAttribute('aria-pressed', S.traj === 'tramos');
+  $('#traj-excel').setAttribute('aria-pressed', S.traj === 'excel');
+  ['v1', 'g1', 'g2', 'g3', 'g4', 'g5', 'rmin', 'rmax'].forEach(k => { const r = document.getElementById(k); if (r) r.closest('.ctl').style.opacity = S.traj === 'excel' ? .45 : 1; });
+}
+function applyState(st) {
+  S = Object.assign({}, st);
+  for (const k in CTL) if (k in S) CTL[k](S[k]);
+  syncTraj(); schedule();
+}
+function replicateExcel() {
+  applyState(Object.assign({}, DEFAULTS, { plazo: S.plazo, renew: false, capexSet: S.capexSet, traj: 'excel', sigma: 0, shp: 0, uExpS: 0, epsS: 0, subS: 0, uGS: 0, boutS: 0, seasS: 0, rmin: 1, rmax: 1, capOn: false, N: 1000 }));
+}
+
+// ---------- Simulación ----------
+let timer = null;
+function schedule() { $('#results').classList.add('busy'); clearTimeout(timer); timer = setTimeout(run, 140); }
+let LAST = null;
+function run() {
+  const t0 = performance.now();
+  const eq = equilibrium(S); // inversión única en t1 que lleva la TIR al WACC (valores centrales)
+  const cmp = {};
+  ['eq', 'orig', 'alt'].forEach(k => {
+    const P = Object.assign({}, S, { capexSet: k, calcBE: k === S.capexSet }, k === 'eq' ? { _lump: eq.k } : {});
+    cmp[k] = { sim: simulate(P, S.N, S.seed, false), det: simulate(P, 1, 1, true) }; // mismos sorteos: solo cambian las inversiones
+  });
+  const sim = cmp[S.capexSet].sim, det = cmp[S.capexSet].det;
+  const ms = performance.now() - t0;
+  // Planilla actualizada con este plazo: visitas de KPI, sin aleatoriedad, filas 11–15 vacías + monto de equilibrio en t1
+  const xlP = Object.assign({}, DEFAULTS, { plazo: S.plazo, wacc: S.wacc, renew: false, traj: 'excel', capOn: false });
+  const xlEq = equilibrium(xlP);
+  const xl = { eq: xlEq, orig: simulate(Object.assign({}, xlP, { capexSet: 'orig' }), 1, 1, true) };
+  LAST = { sim, det, ms, xl, eq, cmp };
+  render();
+  $('#results').classList.remove('busy');
+}
+const sortF = a => Float64Array.from(a).filter(x => !isNaN(x)).sort();
+function q(s, p) { if (!s.length) return NaN; const i = p * (s.length - 1), lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); }
+const mean = a => { let s = 0, n = 0; for (const x of a) if (isFinite(x)) { s += x; n++; } return n ? s / n : NaN; };
+function ranks(a) {
+  const idx = Array.from(a, (_, i) => i).sort((i, j) => a[i] - a[j]);
+  const r = new Float64Array(a.length);
+  for (let i = 0; i < idx.length;) { let j = i; while (j + 1 < idx.length && a[idx[j + 1]] === a[idx[i]]) j++; const rk = (i + j) / 2; for (let k = i; k <= j; k++) r[idx[k]] = rk; i = j + 1; }
+  return r;
+}
+function corr(a, b) {
+  const n = a.length, ma = mean(a), mb = mean(b);
+  let sab = 0, saa = 0, sbb = 0;
+  for (let i = 0; i < n; i++) { const x = a[i] - ma, y = b[i] - mb; sab += x * y; saa += x * x; sbb += y * y; }
+  return saa > 0 && sbb > 0 ? sab / Math.sqrt(saa * sbb) : NaN;
+}
+
+// ---------- Gráficos ----------
+const NS = 'http://www.w3.org/2000/svg';
+function sv(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function niceTicks(lo, hi, n) {
+  if (!(hi > lo)) { hi = lo + 1; }
+  const span = hi - lo, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0))), r = step0 / mag;
+  const step = (r >= 5 ? 10 : r >= 2 ? 5 : r >= 1 ? 2 : 1) * mag;
+  const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+function tipBox(container) {
+  let t = container.querySelector('.tip');
+  if (!t) { t = el('div', { class: 'tip', role: 'status' }); t.hidden = true; container.appendChild(t); }
+  return t;
+}
+function fillTip(t, head, rows) {
+  t.textContent = '';
+  t.appendChild(el('div', { class: 'h', text: head }));
+  rows.forEach(([k, v]) => t.appendChild(el('div', { class: 'r' }, el('span', { text: k }), el('b', { text: v }))));
+}
+function placeTip(t, container, x, y) {
+  t.hidden = false;
+  const W = container.clientWidth, tw = t.offsetWidth;
+  t.style.left = Math.min(W - tw, Math.max(0, x + 14)) + 'px';
+  t.style.top = Math.max(0, y - 10) + 'px';
+}
+
+function fanChart(container, opt) {
+  container.querySelectorAll('svg').forEach(s => s.remove());
+  const W = Math.max(320, container.clientWidth), Hh = opt.height || 300;
+  const m = { l: 62, r: 14, t: 10, b: 28 };
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${Hh}`, role: 'img', 'aria-label': opt.aria });
+  container.insertBefore(svg, container.firstChild);
+  const xs = opt.x, x0 = opt.xMin ?? xs[0], x1 = xs[xs.length - 1];
+  let ymin = opt.yMin ?? Math.min(0, ...opt.p5), ymax = Math.max(...opt.p95, ...(opt.extraMax || []));
+  if (opt.history) ymax = Math.max(ymax, ...opt.history.map(h => h[1]));
+  const yt = niceTicks(ymin, ymax, 5); ymin = Math.min(ymin, yt[0]); ymax = Math.max(ymax, yt[yt.length - 1]);
+  const X = v => m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r);
+  const Y = v => Hh - m.b - (v - ymin) / (ymax - ymin) * (Hh - m.t - m.b);
+  yt.forEach(v => {
+    sv('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: v === 0 ? 'var(--axis)' : 'var(--line)', 'stroke-width': v === 0 ? 1.5 : 1 }, svg);
+    const tx = sv('text', { x: m.l - 8, y: Y(v) + 4, 'text-anchor': 'end' }, svg); tx.textContent = opt.yFmt(v);
+  });
+  const step = (x1 - x0) > 30 ? 5 : (x1 - x0) > 12 ? 2 : 1;
+  for (let v = Math.ceil(x0 / step) * step; v <= x1; v += step) { const tx = sv('text', { x: X(v), y: Hh - 8, 'text-anchor': 'middle' }, svg); tx.textContent = v; }
+  const area = (lo, hi) => 'M' + xs.map((x, i) => X(x) + ',' + Y(hi[i])).join('L') + 'L' + xs.map((x, i) => X(x) + ',' + Y(lo[i])).reverse().join('L') + 'Z';
+  sv('path', { d: area(opt.p5, opt.p95), fill: 'var(--series-soft)', stroke: 'none' }, svg);
+  sv('path', { d: area(opt.p25, opt.p75), fill: 'var(--series-mid)', stroke: 'none' }, svg);
+  const line = (arr, xx) => 'M' + (xx || xs).map((x, i) => X(x) + ',' + Y(arr[i])).join('L');
+  (opt.lines || []).forEach(L => sv('path', { d: line(L.values, L.x), fill: 'none', stroke: L.color, 'stroke-width': L.w || 2, 'stroke-dasharray': L.dash || '', 'stroke-linejoin': 'round' }, svg));
+  sv('path', { d: line(opt.p50), fill: 'none', stroke: 'var(--series)', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }, svg);
+  if (opt.history) {
+    sv('path', { d: 'M' + opt.history.map(h => X(h[0]) + ',' + Y(h[1])).join('L'), fill: 'none', stroke: 'var(--muted)', 'stroke-width': 1.5 }, svg);
+    opt.history.forEach(h => sv('circle', { cx: X(h[0]), cy: Y(h[1]), r: 3, fill: 'var(--surface)', stroke: 'var(--muted)', 'stroke-width': 1.5 }, svg));
+  }
+  const hair = sv('line', { y1: m.t, y2: Hh - m.b, stroke: 'var(--axis)', 'stroke-width': 1, visibility: 'hidden' }, svg);
+  const dot = sv('circle', { r: 4.5, fill: 'var(--series)', stroke: 'var(--surface)', 'stroke-width': 2, visibility: 'hidden' }, svg);
+  const hit = sv('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: Hh - m.t - m.b, fill: 'transparent', tabindex: 0 }, svg);
+  const tip = tipBox(container);
+  const allX = (opt.history ? opt.history.map(h => h[0]) : []).concat(xs);
+  const show = xv => {
+    const sx = X(xv);
+    hair.setAttribute('x1', sx); hair.setAttribute('x2', sx); hair.setAttribute('visibility', 'visible');
+    const i = xs.indexOf(xv);
+    if (i >= 0) {
+      dot.setAttribute('cx', sx); dot.setAttribute('cy', Y(opt.p50[i])); dot.setAttribute('visibility', 'visible');
+      const rows = [['P95', opt.yFmtTip(opt.p95[i])], ['P75', opt.yFmtTip(opt.p75[i])], ['Mediana', opt.yFmtTip(opt.p50[i])], ['P25', opt.yFmtTip(opt.p25[i])], ['P5', opt.yFmtTip(opt.p5[i])]];
+      (opt.lines || []).forEach(L => { const j = (L.x || xs).indexOf(xv); if (j >= 0) rows.push([L.name, opt.yFmtTip(L.values[j])]); });
+      fillTip(tip, String(xv) + (opt.tLabel ? ' · ' + opt.tLabel(i) : ''), rows);
+    } else {
+      dot.setAttribute('visibility', 'hidden');
+      const h = opt.history.find(h => h[0] === xv);
+      fillTip(tip, String(xv) + ' · dato real', [['Visitas', opt.yFmtTip(h[1])]]);
+    }
+    const pt = svg.getBoundingClientRect(), sc = pt.width / W;
+    placeTip(tip, container, sx * sc, m.t * sc);
+  };
+  let kIdx = allX.length - 1;
+  hit.addEventListener('pointermove', ev => {
+    const pt = svg.getBoundingClientRect(), px = (ev.clientX - pt.left) * W / pt.width;
+    let best = allX[0], bd = 1e9; allX.forEach(v => { const d = Math.abs(X(v) - px); if (d < bd) { bd = d; best = v; } });
+    kIdx = allX.indexOf(best); show(best);
+  });
+  const hide = () => { hair.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); tip.hidden = true; };
+  hit.addEventListener('pointerleave', hide); hit.addEventListener('blur', hide);
+  hit.addEventListener('focus', () => show(allX[kIdx]));
+  hit.addEventListener('keydown', ev => { if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { kIdx = Math.max(0, Math.min(allX.length - 1, kIdx + (ev.key === 'ArrowRight' ? 1 : -1))); show(allX[kIdx]); ev.preventDefault(); } });
+}
+
+function histChart(container, values, opt) {
+  container.querySelectorAll('svg').forEach(s => s.remove());
+  const s = sortF(values);
+  const W = Math.max(300, container.clientWidth), Hh = 230;
+  const m = { l: 14, r: 14, t: 26, b: 28 };
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${Hh}`, role: 'img', 'aria-label': opt.aria });
+  container.insertBefore(svg, container.firstChild);
+  if (!s.length) return;
+  let lo = q(s, 0.005), hi = q(s, 0.995);
+  (opt.refs || []).forEach(r => { if (isFinite(r.x)) { lo = Math.min(lo, r.x); hi = Math.max(hi, r.x); } });
+  if (hi - lo < 1e-9 * Math.max(1, Math.abs(hi))) { const pad = Math.max(Math.abs(hi) * 0.05, opt.minPad || 1); lo -= pad; hi += pad; }
+  const pad = (hi - lo) * 0.04; lo -= pad; hi += pad;
+  const NB = 36, bw = (hi - lo) / NB, cnt = new Array(NB).fill(0);
+  s.forEach(v => { let b = Math.floor((v - lo) / bw); b = Math.max(0, Math.min(NB - 1, b)); cnt[b]++; });
+  const cmax = Math.max(...cnt);
+  const X = v => m.l + (v - lo) / (hi - lo) * (W - m.l - m.r);
+  const Y = c => Hh - m.b - c / cmax * (Hh - m.t - m.b);
+  sv('line', { x1: m.l, x2: W - m.r, y1: Hh - m.b, y2: Hh - m.b, stroke: 'var(--axis)' }, svg);
+  niceTicks(lo, hi, 5).forEach(v => { if (v < lo || v > hi) return; const t = sv('text', { x: X(v), y: Hh - 9, 'text-anchor': 'middle' }, svg); t.textContent = opt.fmtAxis(v); });
+  const tip = tipBox(container);
+  const pxw = (W - m.l - m.r) / NB;
+  cnt.forEach((c, b) => {
+    const a = lo + b * bw, z = a + bw, mid = (a + z) / 2;
+    const isNeg = mid < opt.split;
+    const g = sv('g', {}, svg);
+    if (c > 0) {
+      const h = Hh - m.b - Y(c), x = X(a) + 1, w = Math.max(1, pxw - 2), y = Y(c), r = Math.min(3, w / 2, h);
+      sv('path', { d: `M${x},${Hh - m.b}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${Hh - m.b}Z`, fill: isNeg ? 'var(--neg)' : 'var(--series)' }, g);
+    }
+    const hr = sv('rect', { x: X(a), y: m.t, width: pxw, height: Hh - m.t - m.b, fill: 'transparent' }, g);
+    hr.addEventListener('pointermove', () => {
+      fillTip(tip, opt.fmtTip(a) + ' a ' + opt.fmtTip(z), [['Escenarios', fmtInt(c)], ['% del total', fmtPct(c / values.length)]]);
+      const pt = svg.getBoundingClientRect(), sc = pt.width / W;
+      placeTip(tip, container, X(mid) * sc, m.t * sc);
+      g.style.opacity = .75;
+    });
+    hr.addEventListener('pointerleave', () => { tip.hidden = true; g.style.opacity = 1; });
+  });
+  const marks = [['P5', q(s, .05)], ['P50', q(s, .5)], ['P95', q(s, .95)]];
+  marks.forEach(([k, v]) => {
+    sv('line', { x1: X(v), x2: X(v), y1: m.t - 2, y2: Hh - m.b, stroke: 'var(--ink2)', 'stroke-width': 1, 'stroke-dasharray': '2 3' }, svg);
+    const t = sv('text', { x: X(v), y: m.t - 8, 'text-anchor': 'middle', style: 'fill: var(--ink2)' }, svg); t.textContent = k;
+  });
+  (opt.refs || []).forEach(r => {
+    if (!isFinite(r.x)) return;
+    sv('line', { x1: X(r.x), x2: X(r.x), y1: m.t + 8, y2: Hh - m.b, stroke: 'var(--accent)', 'stroke-width': 2 }, svg);
+    const t = sv('text', { x: X(r.x) + 4, y: m.t + 18, style: 'fill: var(--accent); font-weight: 600' }, svg); t.textContent = r.label;
+    if (X(r.x) > W * 0.75) { t.setAttribute('text-anchor', 'end'); t.setAttribute('x', X(r.x) - 4); }
+  });
+}
+
+function driversChart(container, items) {
+  container.querySelectorAll('svg').forEach(s => s.remove());
+  const W = Math.max(300, container.clientWidth), rowH = 26, Hh = items.length * rowH + 30;
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${Hh}`, role: 'img', 'aria-label': 'Correlación de cada variable con el VAN' });
+  container.insertBefore(svg, container.firstChild);
+  const lw = Math.min(210, W * 0.45), vw = 46, x0 = lw + (W - lw - vw) / 2, half = (W - lw - vw) / 2 - 6;
+  sv('line', { x1: x0, x2: x0, y1: 4, y2: Hh - 22, stroke: 'var(--axis)' }, svg);
+  [-1, -0.5, 0.5, 1].forEach(v => { const t = sv('text', { x: x0 + v * half, y: Hh - 6, 'text-anchor': 'middle' }, svg); t.textContent = v.toLocaleString('es-AR'); });
+  items.forEach((it, i) => {
+    const y = 6 + i * rowH;
+    const lab = sv('text', { x: 0, y: y + 13, style: 'fill: var(--ink2); font-size: 12px' }, svg); lab.textContent = it.label;
+    const w = Math.abs(it.r) * half, x = it.r >= 0 ? x0 : x0 - w;
+    if (w > 0.5) sv('rect', { x, y: y + 2, width: w, height: 14, rx: 3, fill: it.r >= 0 ? 'var(--series)' : 'var(--neg)' }, svg);
+    const v = sv('text', { x: W, y: y + 13, 'text-anchor': 'end', style: 'fill: var(--ink); font-family: var(--f-mono)' }, svg); v.textContent = it.r.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  });
+}
+
+function legend(target, items) {
+  target.textContent = '';
+  items.forEach(([kind, color, text, dash]) => {
+    const sw = el('i', { class: kind === 'line' ? 'ln' : 'sw' });
+    if (kind === 'line') { sw.style.borderTopColor = color; if (dash) sw.style.borderTopStyle = 'dashed'; } else sw.style.background = color;
+    target.appendChild(el('span', {}, sw, document.createTextNode(text)));
+  });
+}
+
+// ---------- Comparación de CAPEX ----------
+const SETS = [['eq', 'Equilibrio t1'], ['orig', 'Filas 11–15'], ['alt', 'Alternativo']];
+const capexOf = k => k === 'eq' ? lumpArr(LAST.eq.k) : CAPEX_SETS[capexKey(Object.assign({}, S, { capexSet: k }))];
+function renderCompare() {
+  const c = LAST.cmp, N = LAST.sim.N, H = LAST.sim.H;
+  const t1 = $('#tbl-capex'); t1.textContent = '';
+  const th = el('tr'); th.appendChild(el('th', { text: 'Inversiones (filas 11–15)' }));
+  for (let t = 1; t <= 6; t++) th.appendChild(el('th', { text: 't' + t + ' · ' + (Y0 + t - 1) }));
+  ['t7–t' + H, 'Total nominal', 'VP al año 1', 'A favor del PN · VP año 1'].forEach(x => th.appendChild(el('th', { text: x })));
+  t1.appendChild(el('thead', {}, th));
+  const b1 = el('tbody');
+  SETS.forEach(([k, n]) => {
+    const cap = capexOf(k), pn = k === 'eq' ? cap : INFRA_SETS[k];
+    const tr = el('tr'); tr.appendChild(el('td', { text: n + (S.capexSet === k ? ' · en pantalla' : '') }));
+    for (let i = 0; i < 6; i++) tr.appendChild(el('td', { text: fmtM(cap[i]) }));
+    let rest = 0, tot = 0; for (let i = 0; i < H; i++) { tot += cap[i]; if (i >= 6) rest += cap[i]; }
+    tr.appendChild(el('td', { text: fmtM(rest) }));
+    tr.appendChild(el('td', { text: fmtM(tot) }));
+    tr.appendChild(el('td', { text: fmtM(pv1(cap, S.wacc, H)) }));
+    tr.appendChild(el('td', { text: fmtM(pv1(pn, S.wacc, H)) }));
+    b1.appendChild(tr);
+  });
+  t1.appendChild(b1);
+  const stats = k => {
+    const s = c[k].sim, van = sortF(s.van), tir = sortF(s.tir), pn = sortF(s.vanPN), pay = sortF(s.payback);
+    const minCum = sortF(Array.from({ length: N }, (_, n) => { let mn = 0; for (let i = 0; i < H; i++) mn = Math.min(mn, s.cumFlow[i][n]); return mn; }));
+    return {
+      vanDet: c[k].det.van[0], tirDet: c[k].det.tir[0], van50: q(van, .5), van5: q(van, .05), van95: q(van, .95),
+      pNeg: s.van.filter(x => x < 0).length / N, tir50: q(tir, .5),
+      pBelow: (s.tir.filter(x => x < S.wacc).length + s.tir.filter(isNaN).length) / N,
+      pn50: q(pn, .5), pay50: q(pay, .5), never: s.payback.filter(x => !isFinite(x)).length / N, need: -q(minCum, .5)
+    };
+  };
+  const st = SETS.map(([k]) => stats(k));
+  const t2 = $('#tbl-cmp'); t2.textContent = '';
+  const h2 = el('tr'); ['Indicador'].concat(SETS.map(x => x[1])).forEach(x => h2.appendChild(el('th', { text: x })));
+  t2.appendChild(el('thead', {}, h2));
+  const b2 = el('tbody');
+  const rows = [
+    ['VAN sin aleatoriedad', x => fmtM(x.vanDet)],
+    ['TIR sin aleatoriedad', x => fmtPct(x.tirDet, 2)],
+    ['VAN Volterra · mediana', x => fmtM(x.van50)],
+    ['VAN Volterra · P5 a P95', x => fmtM(x.van5) + ' a ' + fmtM(x.van95)],
+    ['Probabilidad de VAN negativo', x => fmtPct(x.pNeg, 0)],
+    ['TIR · mediana', x => fmtPct(x.tir50)],
+    ['TIR por debajo del WACC', x => fmtPct(x.pBelow, 0)],
+    ['Necesidad máxima de fondeo · mediana', x => fmtM(x.need)],
+    ['Acumulado positivo desde · mediana', x => fmtYear(x.pay50)],
+    ['No recupera en la concesión', x => fmtPct(x.never, 0)],
+    ['VAN Parque Nacional · mediana', x => fmtM(x.pn50)]
+  ];
+  rows.forEach(([n, f]) => { const tr = el('tr'); tr.appendChild(el('td', { text: n })); st.forEach(x => tr.appendChild(el('td', { text: f(x) }))); b2.appendChild(tr); });
+  t2.appendChild(b2);
+  renderEquilibrium();
+}
+function statBox(k, v, s) { return el('div', { class: 'tile' }, el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v }), el('div', { class: 's', text: s })); }
+function renderEquilibrium() {
+  const eq = LAST.eq, H = eq.H, w = S.wacc, sim = LAST.sim, N = sim.N;
+  const g = $('#eq-tiles'); g.textContent = '';
+  const pvO = eq.pvOrig, pvA = eq.pvAlt, v1 = eq.van0 * (1 + w);
+  if (eq.k <= 0) {
+    g.append(statBox('VAN sin inversiones (filas 11–15 vacías)', fmtM(eq.van0), 'Aun sin inversiones el proyecto no llega al WACC: no hay monto que lo equilibre.'));
+  } else {
+    g.append(
+      statBox('VAN sin inversiones (filas 11–15 vacías)', fmtM(eq.van0), 'descontado al año 0 como en la planilla · ' + fmtM(v1) + ' llevado al año 1'),
+      statBox('Inversión total en t1 que iguala la TIR al WACC', fmtM(eq.k), fmtM(eq.k - v1) + ' más que el VAN en t1 (escudo fiscal de la D&A e IVA del año 2) · TIR ' + fmtPct(LAST.cmp.eq.det.tir[0], 2)),
+      statBox('Contra el CAPEX de las filas 11–15', fmtM(Math.abs(eq.k - pvO)), (eq.k >= pvO ? 'de margen' : 'de exceso') + ' · filas 11–15 ' + fmtM(pvO) + ' a VP del año 1'),
+      statBox('Contra el CAPEX alternativo', fmtM(Math.abs(eq.k - pvA)), (eq.k >= pvA ? 'de margen' : 'de exceso') + ' · alternativo ' + fmtM(pvA) + ' a VP del año 1')
+    );
+  }
+  $('#eq-sub').textContent = 'Se vacían las filas 11 a 15 (infraestructura, vehículos, muebles, herramientas y equipamiento) en todos los años y se calcula el VAN resultante. Después se busca el único monto de inversión en el año 1 que deja el VAN en cero al ' + fmtPct(w, 1) + ', o sea TIR = WACC. El monto incluye sus efectos: la D&A amortiza el ' + fmtPct(S.daF, 0) + ' en ' + H + ' años y baja Ganancias, el IVA del año 2 se reduce y todo el monto cuenta a favor del Parque Nacional. Se calcula con los valores centrales de los supuestos y se actualiza con cada cambio.';
+  const be = sim.be;
+  const ch = $('#ch-eq');
+  if (!be) { ch.textContent = ''; return; }
+  histChart(ch, be, { split: pvO, refs: [{ x: pvO, label: 'Filas 11–15' }, { x: pvA, label: 'Alternativo' }], fmtAxis: v => fmtM(v).replace(' M', ''), fmtTip: fmtM, aria: 'Distribución de la inversión de equilibrio en t1 por escenario', minPad: 1e7 });
+  const zero = Array.from(be).filter(x => x <= 0).length / N;
+  const okO = Array.from(be).filter(x => x >= pvO).length / N, okA = Array.from(be).filter(x => x >= pvA).length / N;
+  $('#eq-mc').textContent = 'En cada escenario simulado: inversión máxima en t1 que todavía deja TIR ≥ WACC. Mediana ' + fmtM(q(sortF(be), .5)) + ' (P10 ' + fmtM(q(sortF(be), .1)) + ', P90 ' + fmtM(q(sortF(be), .9)) + '). Alcanza para el CAPEX de las filas 11–15 (a VP del año 1) en ' + fmtPct(okO, 0) + ' de los escenarios y para el alternativo en ' + fmtPct(okA, 0) + '.' + (zero > 0.005 ? ' En ' + fmtPct(zero, 0) + ' el proyecto no llega al WACC aun sin inversiones.' : '') + ' En rojo, los escenarios donde no alcanza para el CAPEX de las filas 11–15.';
+}
+
+// ---------- Render ----------
+function tile(k, v, s, pill) {
+  const t = el('div', { class: 'tile' }, el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v }));
+  if (s) t.appendChild(el('div', { class: 's', text: s }));
+  if (pill) { const i = el('i'); i.style.background = pill[0]; t.appendChild(el('span', { class: 'pill' }, i, document.createTextNode(pill[1]))); }
+  return t;
+}
+function riskPill(p) {
+  if (p >= 0.5) return ['var(--crit)', 'Riesgo alto'];
+  if (p >= 0.25) return ['var(--warn)', 'Riesgo medio'];
+  return ['var(--good)', 'Riesgo bajo'];
+}
+function render() {
+  if (!LAST) return;
+  const { sim, det, ms } = LAST, N = sim.N, H = sim.H, YL = Y0 + H - 1;
+  $('#eyebrow').textContent = 'Plan de negocios Volterra · Parque Nacional Sierra de las Quijadas · concesión ' + Y0 + '–' + YL + ' (' + H + ' años)';
+  const van = sortF(sim.van), tir = sortF(sim.tir), pn = sortF(sim.vanPN), pnc = sortF(sim.vanCanon);
+  const pNeg = sim.van.filter(x => x < 0).length / N;
+  const tirNaN = sim.tir.filter(isNaN).length;
+  const pBelow = (sim.tir.filter(x => x < S.wacc).length + tirNaN) / N;
+  const v20 = sortF(sim.visits[H - 1]);
+  const pay = sortF(sim.payback);
+  const y12 = sortF(sim.year12);
+  const never12 = sim.year12.filter(x => !isFinite(x)).length / N;
+
+  const tiles = $('#tiles'); tiles.textContent = '';
+  tiles.append(
+    tile('VAN Volterra · mediana', fmtM(q(van, .5)), 'P5 ' + fmtM(q(van, .05)) + ' · P95 ' + fmtM(q(van, .95))),
+    tile('Probabilidad de VAN negativo', fmtPct(pNeg, 0), 'media del VAN ' + fmtM(mean(sim.van)), riskPill(pNeg)),
+    tile('TIR · mediana', fmtPct(q(tir, .5)), 'P10 ' + fmtPct(q(tir, .1)) + ' · P90 ' + fmtPct(q(tir, .9))),
+    tile('TIR por debajo del WACC (' + fmtPct(S.wacc, 1) + ')', fmtPct(pBelow, 0), tirNaN ? fmtPct(tirNaN / N, 1) + ' de escenarios sin TIR definida' : 'todas las corridas tienen TIR'),
+    tile('VAN Parque Nacional · mediana', fmtM(q(pn, .5)), (S.capexSet === 'eq' ? 'inversión t1' : 'infraestructura') + ' + canon + CMAA · P5 ' + fmtM(q(pn, .05))),
+    tile('Visitas en ' + YL + ' · mediana', fmtInt(q(v20, .5)), 'P5 ' + fmtInt(q(v20, .05)) + ' · P95 ' + fmtInt(q(v20, .95)))
+  );
+
+  const strip = $('#strip'); strip.textContent = '';
+  const add = (l, v) => strip.appendChild(el('span', {}, el('span', { class: 'lbl', text: l + ' ' }), el('b', { text: v })));
+  add('Sin aleatoriedad (valores centrales):', 'VAN ' + fmtM(det.van[0]) + ' · TIR ' + fmtPct(det.tir[0], 2));
+  add('Planilla actualizada a ' + sim.H + ' años (KPI):', 'VAN sin inversiones ' + fmtM(LAST.xl.eq.van0) + ' · inversión t1 ' + fmtM(LAST.xl.eq.k));
+  add('Con las filas 11–15 anteriores:', 'VAN ' + fmtM(LAST.xl.orig.van[0]) + ' · TIR ' + fmtPct(LAST.xl.orig.tir[0], 2));
+  strip.appendChild(el('span', { class: 'status', text: fmtInt(N) + ' escenarios · ' + Math.round(ms) + ' ms' }));
+
+  renderCompare();
+
+  // Visitas
+  const years = Array.from({ length: H }, (_, i) => Y0 + i);
+  const band = arrs => { const o = { p5: [], p25: [], p50: [], p75: [], p95: [] }; arrs.forEach(a => { const s = sortF(a); o.p5.push(q(s, .05)); o.p25.push(q(s, .25)); o.p50.push(q(s, .5)); o.p75.push(q(s, .75)); o.p95.push(q(s, .95)); }); return o; };
+  const bv = band(sim.visits);
+  const detV = Array.from(det.visits, a => a[0]);
+  fanChart($('#ch-visits'), Object.assign({}, bv, {
+    x: years, xMin: 2003, yMin: 0, aria: 'Bandas de visitantes por año ' + Y0 + '–' + YL + ' con historia 2003–2025',
+    history: HIST_YEARS.map((y, i) => [y, HIST_V[i]]),
+    lines: [{ name: 'Excel (KPI)', values: V_EXCEL.slice(0, H), color: 'var(--accent)', dash: '5 4', w: 1.5 }, { name: 'Sin aleatoriedad', values: detV, color: 'var(--ink2)', dash: '2 3', w: 1.5 }],
+    yFmt: v => v >= 1000 ? (v / 1000).toLocaleString('es-AR') + ' mil' : String(v), yFmtTip: fmtInt, tLabel: i => 'año ' + (i + 1)
+  }));
+  legend($('#lg-visits'), [['sw', 'var(--series-soft)', 'P5–P95'], ['sw', 'var(--series-mid)', 'P25–P75'], ['line', 'var(--series)', 'Mediana'], ['line', 'var(--muted)', 'Real 2003–2025'], ['line', 'var(--accent)', 'Serie actual del Excel', true], ['line', 'var(--ink2)', 'Sin aleatoriedad', true]]);
+
+  // VAN / TIR
+  histChart($('#ch-van'), sim.van, { split: 0, refs: [{ x: det.van[0], label: 'sin aleatoriedad' }], fmtAxis: v => fmtM(v).replace(' M', ''), fmtTip: fmtM, aria: 'Distribución del VAN', minPad: 1e7 });
+  $('#sub-van').textContent = 'WACC ' + fmtPct(S.wacc, 1) + '. En rojo, los escenarios que destruyen valor (' + fmtPct(pNeg, 0) + '). Media ' + fmtM(mean(sim.van)) + '. Eje en millones de pesos.';
+  histChart($('#ch-tir'), sim.tir, { split: S.wacc, refs: [{ x: S.wacc, label: 'WACC' }], fmtAxis: v => fmtPct(v, 0), fmtTip: v => fmtPct(v, 1), aria: 'Distribución de la TIR', minPad: 0.01 });
+  $('#sub-tir').textContent = 'En rojo, TIR por debajo del WACC. ' + (tirNaN ? fmtInt(tirNaN) + ' escenarios no tienen TIR definida (por ejemplo, flujos que no cambian de signo) y se cuentan como debajo del WACC.' : '');
+
+  // Acumulado
+  const bc = band(sim.cumFlow);
+  const detC = Array.from(det.cumFlow, a => a[0]);
+  fanChart($('#ch-cum'), Object.assign({}, bc, {
+    x: years, aria: 'Saldo final acumulado por año', lines: [{ name: 'Sin aleatoriedad', values: detC, color: 'var(--ink2)', dash: '2 3', w: 1.5 }],
+    yFmt: v => (v / 1e6).toLocaleString('es-AR', { maximumFractionDigits: 0 }), yFmtTip: fmtM, tLabel: i => 'año ' + (i + 1), height: 260
+  }));
+  legend($('#lg-cum'), [['sw', 'var(--series-soft)', 'P5–P95'], ['sw', 'var(--series-mid)', 'P25–P75'], ['line', 'var(--series)', 'Mediana'], ['line', 'var(--ink2)', 'Sin aleatoriedad', true]]);
+  const minCum = sortF(Array.from({ length: N }, (_, n) => { let mn = 0; for (let i = 0; i < H; i++) mn = Math.min(mn, sim.cumFlow[i][n]); return mn; }));
+  const neverPay = sim.payback.filter(x => !isFinite(x)).length / N;
+  $('#sub-cum').textContent = 'Flujo de caja nominal acumulado sin descontar (millones de pesos). El acumulado queda positivo en ' + fmtYear(q(pay, .5)) + ' (mediana). En ' + fmtPct(neverPay, 0) + ' de los escenarios no se recupera dentro de la concesión. Necesidad máxima de fondeo, mediana: ' + fmtM(-q(minCum, .5)) + '.';
+
+  // PN
+  const bp = band(sim.pnYear);
+  fanChart($('#ch-pn'), Object.assign({}, bp, {
+    x: years, yMin: 0, aria: 'Canon más CMAA por año', height: 230,
+    yFmt: v => (v / 1e6).toLocaleString('es-AR', { maximumFractionDigits: 0 }), yFmtTip: fmtM, tLabel: i => 'año ' + (i + 1)
+  }));
+  $('#sub-pn').textContent = 'Pago anual en millones de pesos. El canon llega al tope de ' + fmtPct(S.ctop, 1) + ' en ' + fmtYear(q(y12, .5)) + ' (mediana; P10 ' + fmtYear(q(y12, .1)) + ', P90 ' + fmtYear(q(y12, .9)) + ')' + (never12 > 0.005 ? ', y nunca lo alcanza en ' + fmtPct(never12, 0) + ' de los escenarios' : '') + '. VAN de canon + CMAA, mediana ' + fmtM(q(pnc, .5)) + '.';
+
+  // Drivers
+  const vr = ranks(sim.van);
+  const items = DRIVERS.map(([k, label]) => ({ label, r: corr(ranks(sim.drv[k]), vr) })).filter(d => isFinite(d.r)).sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+  const dc = $('#ch-drv');
+  if (items.length) driversChart(dc, items);
+  else { dc.querySelectorAll('svg').forEach(s => s.remove()); dc.textContent = 'Sin variables aleatorias activas.'; }
+
+  // Tabla
+  const tbl = $('#tbl'); tbl.textContent = '';
+  const ps = [.05, .10, .25, .5, .75, .90, .95];
+  const thead = el('thead'); const hr = el('tr'); hr.appendChild(el('th', { text: 'Indicador' })); ps.forEach(p => hr.appendChild(el('th', { text: 'P' + Math.round(p * 100) }))); hr.appendChild(el('th', { text: 'Media' })); thead.appendChild(hr); tbl.appendChild(thead);
+  const tb = el('tbody');
+  const cv = sortF(sim.cumVisits);
+  const rows = [
+    ['VAN Volterra', van, fmtM, mean(sim.van)],
+    ['TIR', tir, v => fmtPct(v, 1), NaN],
+    ['VAN Parque Nacional (' + (S.capexSet === 'eq' ? 'inversión t1' : 'infra') + ' + canon + CMAA)', pn, fmtM, mean(sim.vanPN)],
+    ['VAN canon + CMAA', pnc, fmtM, mean(sim.vanCanon)],
+    ['Visitas acumuladas ' + Y0 + '–' + YL, cv, fmtInt, mean(sim.cumVisits)],
+    ['Visitas ' + YL, v20, fmtInt, mean(sim.visits[H - 1])],
+    ['Año en que el acumulado queda positivo', pay, fmtYear, NaN],
+    ['Año en que el canon llega al tope', y12, fmtYear, NaN]
+  ];
+  rows.forEach(([n, s, f, mu]) => { const tr = el('tr'); tr.appendChild(el('td', { text: n })); ps.forEach(p => tr.appendChild(el('td', { text: f(q(s, p)) }))); tr.appendChild(el('td', { text: isFinite(mu) ? f(mu) : '—' })); tb.appendChild(tr); });
+  tbl.appendChild(tb);
+}
+
+buildPanel();
+run();
+let rw = null, lastW = 0; new ResizeObserver(ents => { const w = Math.round(ents[0].contentRect.width); if (w === lastW) return; lastW = w; clearTimeout(rw); rw = setTimeout(render, 120); }).observe($('#results'));
+})();
+</script>
+
+<script>
+(function () {
+  const j = document.getElementById('jump'), panel = document.getElementById('panel'), res = document.getElementById('results');
+  j.addEventListener('click', ev => { ev.preventDefault(); res.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
+  if ('IntersectionObserver' in window) {
+    let pv = true, rv = false;
+    const upd = () => j.setAttribute('data-off', pv && !rv ? '0' : '1');
+    new IntersectionObserver(e => { pv = e[0].isIntersecting; upd(); }).observe(panel);
+    new IntersectionObserver(e => { rv = e[0].isIntersecting; upd(); }, { rootMargin: '0px 0px -60% 0px' }).observe(res);
+  }
+})();
+</script>
+<script>
+// Service worker: permite instalar la app y usarla sin conexión después de la primera visita
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+</script>
+</body>
+</html>
